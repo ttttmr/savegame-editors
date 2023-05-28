@@ -1,8 +1,8 @@
 /*
-	savegame-editor.js v20200719
+	savegame-editor.js v20230519
 	A library that lets you create easily a savegame editor. Made with vanilla JS.
 
-	by Marc Robledo 2016-2020
+	by Marc Robledo 2016-2023
 	http://www.marcrobledo.com/license
 */
 
@@ -164,8 +164,15 @@ function getSavegameAllNames(){
 		return SavegameEditor.Filename;
 	else{
 		var s='';
-		for(var i=0; i<SavegameEditor.Filename.length; i++)
-			s+=SavegameEditor.Filename[i]+', ';
+		for(var i=0; i<SavegameEditor.Filename.length; i++){
+			if(i){
+				if(i===(SavegameEditor.Filename.length-1))
+					s+=' or ';
+				else
+					s+=', ';
+			}
+			s+=SavegameEditor.Filename[i];
+		}
 		return s
 	}
 }
@@ -187,55 +194,57 @@ window.addEventListener('load', function(){
 		loadSavegameFromInput(this);
 	}, false);
 
-	var demoMessage=document.createElement('button');
-	demoMessage.id='demo';
-	demoMessage.innerHTML='Do you want to try it out? <u>Try an example savegame</u>';
-	demoMessage.addEventListener('click', function(){
-		if(typeof window.fetch==='function'){
-			fetch(SavegameEditor.Filename)
-				.then(res => res.arrayBuffer()) // Gets the response and returns it as a blob
-				.then(ab => {
-					tempFile=new MarcFile(ab.byteLength);
-					tempFile.fileName=SavegameEditor.Filename;
-					tempFile._u8array=new Uint8Array(ab);
-					tempFile._dataView=new DataView(ab);
-					_tempFileLoadFunction();
-				})
-				.catch(function(){
-					alert('Unexpected error: can\'t download example savegame');
-				});
-		}else{
-			var oReq=new XMLHttpRequest();
-			oReq.open('GET', SavegameEditor.Filename, true);
-			oReq.responseType='arraybuffer';
-
-			oReq.onload=function(oEvent){
-				if(this.status===200) {
-					var ab=oReq.response; //Note: not oReq.responseText
-
-					tempFile=new MarcFile(ab.byteLength);
-					tempFile.fileName=SavegameEditor.Filename;
-					tempFile._u8array=new Uint8Array(ab);
-					tempFile._dataView=new DataView(ab);
-					_tempFileLoadFunction();
-				}else{
-					alert('Unexpected error: can\'t download example savegame');
-				}
-			};
-
-			oReq.onerror=function(oEvent){
-				alert('Unexpected error: can\'t download example savegame');
-			};
-
-			oReq.send(null);
-		}
-	}, false);
-
 	dragZone.appendChild(dragMessage);
 	dragZone.appendChild(inputFile);
-	dragZone.appendChild(demoMessage);
 	document.body.appendChild(dragZone);
 
+
+	if(!SavegameEditor.noDemo){
+		var demoMessage=document.createElement('button');
+		demoMessage.id='demo';
+		demoMessage.innerHTML='Do you want to try it out? <u>Try an example savegame</u>';
+		demoMessage.addEventListener('click', function(){
+			if(typeof window.fetch==='function'){
+				fetch(SavegameEditor.Filename)
+					.then(res => res.arrayBuffer()) // Gets the response and returns it as a blob
+					.then(ab => {
+						tempFile=new MarcFile(ab.byteLength);
+						tempFile.fileName=SavegameEditor.Filename;
+						tempFile._u8array=new Uint8Array(ab);
+						tempFile._dataView=new DataView(ab);
+						_tempFileLoadFunction();
+					})
+					.catch(function(){
+						alert('Unexpected error: can\'t download example savegame');
+					});
+			}else{
+				var oReq=new XMLHttpRequest();
+				oReq.open('GET', SavegameEditor.Filename, true);
+				oReq.responseType='arraybuffer';
+
+				oReq.onload=function(oEvent){
+					if(this.status===200) {
+						var ab=oReq.response; //Note: not oReq.responseText
+
+						tempFile=new MarcFile(ab.byteLength);
+						tempFile.fileName=SavegameEditor.Filename;
+						tempFile._u8array=new Uint8Array(ab);
+						tempFile._dataView=new DataView(ab);
+						_tempFileLoadFunction();
+					}else{
+						alert('Unexpected error: can\'t download example savegame');
+					}
+				};
+
+				oReq.onerror=function(oEvent){
+					alert('Unexpected error: can\'t download example savegame');
+				};
+
+				oReq.send(null);
+			}
+		}, false);
+		dragZone.appendChild(demoMessage);
+	}
 
 
 	MarcDragAndDrop.add('dragzone', function(droppedFiles){
@@ -358,7 +367,7 @@ function checkbox(id,val){
 		input.value=val;
 	return input
 }
-function select(id,options,func){
+function select(id,options,func,def){
 	var select;
 	if(document.getElementById('select-'+id)){
 		select=document.getElementById('select-'+id);
@@ -367,6 +376,7 @@ function select(id,options,func){
 		select.id='select-'+id;
 		select.className='full-width';
 	}
+	var unknownValue=typeof def!=='undefined';
 	if(options){
 		for(var i=0; i<options.length; i++){
 			if(typeof options[i] === 'number'){
@@ -387,12 +397,25 @@ function select(id,options,func){
 			}else if(typeof options[i] === 'object'){
 				select.appendChild(options[i]);
 			}
-			
+
+			if(unknownValue && options[i].value==def){
+				unknownValue=false;
+			}
 		}
 	}
 
 	if(func)
 		select.addEventListener('change',func,false);
+
+	if(unknownValue){
+		var option=document.createElement('option');
+		option.value=def;
+		option.innerHTML='['+(typeof def==='number'? def.toString(16) : def)+']';
+		select.appendChild(option);
+	}
+
+	if(typeof def!=='undefined')
+		select.value=def;
 
 	return select
 }

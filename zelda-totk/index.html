@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Savegame Editor &ndash; The legend of Zelda: Tears of the Kingdom</title>
+	<meta http-equiv="content-Type" content="text/html; charset=UTF-8"/>
+	<meta name="description" content="A savegame editor for The legend of Zelda: Tears of the Kingdom. It can edit: items, weapon durability, modifiers, horses and more!"/>
+	<meta name="keywords" content="html5, savegame, save, editor, hack, exploit, switch, zelda, tears of the kingdom, totk, weapon, durability, modifier, horse, epona, korok, unlocker, dlc, amiibo"/>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0"/>
+	<link rel="shortcut icon" href="./favicon.png"/>
+	<link type="text/css" rel="stylesheet" href="./zelda-totk.css" media="all"/>
+	<script type="text/javascript" src="../savegame-editor.js"></script>
+	<script type="text/javascript" src="./zelda-totk.js"></script>
+	<script type="text/javascript" src="./zelda-totk.class.armor.js"></script>
+	<script type="text/javascript" src="./zelda-totk.class.equipment.js"></script>
+	<script type="text/javascript" src="./zelda-totk.class.horse.js"></script>
+	<script type="text/javascript" src="./zelda-totk.class.item.js"></script>
+	<script type="text/javascript" src="./zelda-totk.class.korok.js"></script>
+	<script type="text/javascript" src="./zelda-totk.class.mappin.js"></script>
+	<script type="text/javascript" src="./zelda-totk.class.shrine.js"></script>
+	<script type="text/javascript" src="./zelda-totk.class.compendium.js"></script>
+	<script type="text/javascript" src="./zelda-totk.master.js"></script>
+	<script type="text/javascript"><!--
+		/* service worker */
+		/*var FORCE_HTTPS=true;
+		window.addEventListener('load',function(){
+			if(location.protocol==='http:' && FORCE_HTTPS)
+				location.replace(window.location.href.replace('http:','https:'));
+			else if(location.protocol==='https:' && 'serviceWorker' in navigator)
+				navigator.serviceWorker.register('/savegame-editors/zelda-totk/_cache_service_worker.js', {scope: '/savegame-editors/zelda-totk/'});
+		}, false);*/
+	--></script>
+</head>
+<body>
+
+<!-- HEADER -->
+<div id="header">
+	<div id="header-top">
+		<div class="row wrapper padding-vertical">
+			<h1>Savegame Editor for The legend of Zelda: TOTK</h1>
+			<div class="six columns text-left"><img src="./assets/logo.png" style="max-width:90%"/></div>
+			<div class="six columns text-right header-buttons">
+				by <a href="/" class="author">Marc Robledo</a>
+				<a href="https://github.com/marcrobledo/savegame-editors/tree/master/zelda-totk" target="_blank" class="button"><span class="sprite github"></span> See on GitHub</a>
+				<a href="https://www.paypal.me/marcrobledo/5" target="_blank" rel="nofollow" class="donate button"><span class="sprite heart"></span> Donate</a>
+			</div>
+		</div>
+	</div>
+	<div id="toolbar" class="hidden padding-vertical">
+		<div class="row wrapper">
+			<div class="twelve columns text-center">
+				<button id="tab-button-home" title="Home" class="tab-button active" onclick="showTab('home')"><i class="tab-icon home"></i></button>
+				<button id="tab-button-weapons" title="Weapons" class="tab-button" onclick="showTab('weapons')"><i class="tab-icon weapons"></i></button>
+				<button id="tab-button-bows" title="Bows" class="tab-button" onclick="showTab('bows')"><i class="tab-icon bows"></i></button>
+				<button id="tab-button-shields" title="Shields" class="tab-button" onclick="showTab('shields')"><i class="tab-icon shields"></i></button>
+				<button id="tab-button-armors" title="Armors" class="tab-button" onclick="showTab('armors')"><i class="tab-icon clothes"></i></button>
+				<button id="tab-button-materials" title="Materials" class="tab-button" onclick="showTab('materials')"><i class="tab-icon materials"></i></button>
+				<button id="tab-button-food" title="Food" class="tab-button" onclick="showTab('food')"><i class="tab-icon food"></i></button>
+				<button id="tab-button-devices" title="Zonai devices" class="tab-button" onclick="showTab('devices')"><i class="tab-icon devices"></i></button>
+				<button id="tab-button-key" title="Key items" class="tab-button" onclick="showTab('key')"><i class="tab-icon other"></i></button>
+				<button id="tab-button-horses" title="Horses" class="tab-button" onclick="showTab('horses')"><i class="tab-icon horses"></i></button>
+				<button id="tab-button-master" title="Master editor" class="tab-button" onclick="showTab('master')"><i class="tab-icon master"></i></button>
+				<!-- <button id="tab-button-help" title="Help" class="tab-button" onclick="showTab('help')"><i class="tab-icon help"></i></button> -->
+				| <button class="button with-icon icon3" onclick="closeFile()">Close file</button>
+				<button class="button colored blue with-icon icon9" onclick="saveChanges()">Save changes</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- THE EDITOR -->
+<div id="the-editor" class="wrapper hidden">
+	<!-- DEBUG -->
+	<div id="debug"></div>
+	
+	<!-- TAB: HOME -->
+	<div id="tab-home">
+		<!-- RUPEES -->
+		<h3 class="border-red">Stats</h3>
+		<div class="row mb-10">
+			<div class="ten columns"><label>Game version</label></div>
+			<div class="two columns text-right"><span id="span-version"></span></div>
+		</div>
+		<div class="row mb-10">
+			<div class="ten columns"><label>Playtime</label></div>
+			<div class="two columns text-right"><span id="span-playtime"></span></div>
+		</div>
+		<div class="row mb-5">
+			<div class="ten columns"><label for="number-rupees">Rupees</label></div>
+			<div class="two columns"><input id="number-rupees" class="full-width" type="text" /></div>
+		</div>
+		<!-- 
+		<div class="row">
+			<div class="ten columns"><label for="number-mons">Mons</label></div>
+			<div class="two columns"><input id="number-mons" class="full-width" type="text" /></div>
+		</div>
+		<div class="row">
+			<div class="ten columns"><label for="number-relic-gerudo">Gerudo relic remaining uses</label></div>
+			<div class="two columns text-right"><input id="number-relic-gerudo" class="small" type="text" /></div>
+		</div>
+		<div class="row">
+			<div class="ten columns"><label for="number-relic-goron">Goron relic remaining uses</label></div>
+			<div class="two columns text-right"><input id="number-relic-goron" class="small" type="text" /></div>
+		</div>
+		<div class="row">
+			<div class="ten columns"><label for="number-relic-rito">Rito relic remaining uses</label></div>
+			<div class="two columns text-right"><input id="number-relic-rito" class="small" type="text" /></div>
+		</div>
+		<div class="row" id="row-motorcycle">
+			<div class="ten columns"><label for="checkbox-motorcycle">Motorcycle</label></div>
+			<div class="two columns text-right"><input id="checkbox-motorcycle" type="checkbox" value="1" /></div>
+		</div>-->
+		<div class="row mb-5">
+			<div class="ten columns"><label for="select-max-hearts">Max. hearts</label></div>
+			<div class="two columns">
+				<select id="select-max-hearts" class="full-width">
+					<option value="4">1 heart</option>
+					<option value="8">2 hearts</option>
+					<option value="12">3 hearts</option>
+					<option value="16">4 hearts</option>
+					<option value="20">5 hearts</option>
+					<option value="24">6 hearts</option>
+					<option value="28">7 hearts</option>
+					<option value="32">8 hearts</option>
+					<option value="36">9 hearts</option>
+					<option value="40">10 hearts</option>
+					<option value="44">11 hearts</option>
+					<option value="48">12 hearts</option>
+					<option value="52">13 hearts</option>
+					<option value="56">14 hearts</option>
+					<option value="60">15 hearts</option>
+					<option value="64">16 hearts</option>
+					<option value="68">17 hearts</option>
+					<option value="72">18 hearts</option>
+					<option value="76">19 hearts</option>
+					<option value="80">20 hearts</option>
+					<option value="84">21 hearts</option>
+					<option value="88">22 hearts</option>
+					<option value="92">23 hearts</option>
+					<option value="96">24 hearts</option>
+					<option value="100">25 hearts</option>
+					<option value="104">26 hearts</option>
+					<option value="108">27 hearts</option>
+					<option value="112">28 hearts</option>
+					<option value="116">29 hearts</option>
+					<option value="120">30 hearts</option>
+					<option value="124">31 hearts</option>
+					<option value="128">32 hearts</option>
+					<option value="132">33 hearts</option>
+					<option value="136">34 hearts</option>
+					<option value="140">35 hearts</option>
+					<option value="144">36 hearts</option>
+					<option value="148">37 hearts</option>
+					<option value="152">38 hearts</option>
+					<option value="156">39 hearts</option>
+					<option value="160">40 hearts</option>
+				</select>
+			</div>
+		</div>
+		<div class="row mb-5">
+			<div class="ten columns"><label for="select-max-stamina">Max. stamina</label></div>
+			<div class="two columns">
+				<select id="select-max-stamina" class="full-width">
+					<option value="1148846080">1 wheel</option>
+					<option value="1150681088">1 wheel+1/5</option>
+					<option value="1152319488">1 wheel+2/5</option>
+					<option value="1153957888">1 wheel+3/5</option>
+					<option value="1155596288">1 wheel+4/5</option>
+					<option value="1157234688">2 wheels</option>
+					<option value="1158250496">2 wheels+1/5</option>
+					<option value="1159069696">2 wheels+2/5</option>
+					<option value="1159888896">2 wheels+3/5</option>
+					<option value="1160708096">2 wheels+4/5</option>
+					<option value="1161527296">3 wheels</option>
+				</select>
+			</div>
+		</div>
+		<div class="row mb-5">
+			<div class="ten columns"><label for="select-max-battery">Battery size</label></div>
+			<div class="two columns">
+				<select id="select-max-battery" class="full-width">
+					<option value="3000">3000</option>
+					<option value="4000">4000</option>
+					<option value="5000">5000</option>
+					<option value="6000">6000</option>
+					<option value="7000">7000</option>
+					<option value="8000">8000</option>
+					<option value="9000">9000</option>
+					<option value="10000">10000</option>
+					<option value="11000">11000</option>
+					<option value="12000">12000</option>
+					<option value="13000">13000</option>
+					<option value="14000">14000</option>
+					<option value="15000">15000</option>
+					<option value="16000">16000</option>
+					<option value="17000">17000</option>
+					<option value="18000">18000</option>
+					<option value="19000">19000</option>
+					<option value="20000">20000</option>
+					<option value="21000">21000</option>
+					<option value="22000">22000</option>
+					<option value="23000">23000</option>
+					<option value="24000">24000</option>
+					<option value="25000">25000</option>
+					<option value="26000">26000</option>
+					<option value="27000">27000</option>
+					<option value="28000">28000</option>
+					<option value="29000">29000</option>
+					<option value="30000">30000</option>
+					<option value="31000">31000</option>
+					<option value="32000">32000</option>
+					<option value="33000">33000</option>
+					<option value="34000">34000</option>
+					<option value="35000">35000</option>
+					<option value="36000">36000</option>
+					<option value="37000">37000</option>
+					<option value="38000">38000</option>
+					<option value="39000">39000</option>
+					<option value="40000">40000</option>
+					<option value="41000">41000</option>
+					<option value="42000">42000</option>
+					<option value="43000">43000</option>
+					<option value="44000">44000</option>
+					<option value="45000">45000</option>
+					<option value="46000">46000</option>
+					<option value="47000">47000</option>
+					<option value="48000">48000</option>
+				</select>
+			</div>
+		</div>
+		<div class="row mb-5">
+			<div class="ten columns"><label for="number-pony-points">Pony points</label></div>
+			<div class="two columns"><input id="number-pony-points" class="full-width" type="text" /></div>
+		</div>
+		
+		<!-- Pouch size -->
+		<h3 class="border-green">Pouch size</h3>
+		<div class="row mb-5">
+			<div class="ten columns"><label for="number-pouch-size-swords">Sword pouch size</label></div>
+			<div class="two columns"><input id="number-pouch-size-swords" class="full-width" type="text" /></div>
+		</div>
+		<div class="row mb-5">
+			<div class="ten columns"><label for="number-pouch-size-bows">Bow pouch size</label></div>
+			<div class="two columns"><input id="number-pouch-size-bows" class="full-width" type="text" /></div>
+		</div>
+		<div class="row">
+			<div class="ten columns"><label for="number-pouch-size-shields">Shield pouch size</label></div>
+			<div class="two columns"><input id="number-pouch-size-shields" class="full-width" type="text" /></div>
+		</div>
+	
+		<!-- Coordinates -->
+		<h3 class="border-green">Coordinates</h3>
+		<div class="row">
+			<div class="six columns"><label for="float-pos-x">Current Link coordinates (XYZ)</label></div>
+			<div class="two columns"><input id="float-pos-x" class="full-width" type="text" /></div>
+			<div class="two columns"><input id="float-pos-y" class="full-width" type="text" /></div>
+			<div class="two columns"><input id="float-pos-z" class="full-width" type="text" /></div>
+		</div>
+		<!-- <div class="row">
+			<div class="six columns"><label for="select-pos-maptype">Map</label></div>
+			<div class="three columns"><select id="select-pos-maptype"></select></div>
+			<div class="three columns"><select id="select-pos-map"></select></div>
+		</div> -->
+
+
+	
+	
+
+
+		<!-- COMPLETIONISM -->
+		<h3 class="border-blue">Completionism</h3>
+		<div class="row mb-10">
+			<div class="four columns">Map pins <span id="span-pin-counter"></span></div>
+			<div class="eight columns text-right">
+				<button onclick="SavegameEditor.clearAllMapPins()">Remove all map pins</button>
+			</div>
+		</div>
+		<div class="row mb-10">
+			<div class="four columns"><label for="number-koroks">Pin korok locations to map</label></div>
+			<div class="eight columns text-right">
+				<button onclick="SavegameEditor.addKorokPins(0, 299)">Koroks #001-#300</button>
+				<button onclick="SavegameEditor.addKorokPins(300, 599)">Koroks #301-#600</button>
+				<button onclick="SavegameEditor.addKorokPins(600, 899)">Koroks #601-#900</button>
+			</div>
+		</div>
+
+		<!-- <div class="row">
+			<div class="seven columns"><label for="number-defeated-hinox">Defeated Hinox</label></div>
+			<div class="five columns text-right">
+				<input type="text" id="number-defeated-hinox" style="width:50px" disabled />
+				<button onclick="defeatAllHinox()">Defeat all</button>
+				<button onclick="addHinoxToMap()">Add pins to Map</button>
+			</div>
+		</div>
+		<div class="row">
+			<div class="seven columns"><label for="number-defeated-talus">Defeated Talus</label></div>
+			<div class="five columns text-right">
+				<input type="text" id="number-defeated-talus" style="width:50px" disabled />
+				<button onclick="defeatAllTalus()">Defeat all</button>
+				<button onclick="addTalusToMap()">Add pins to Map</button>
+			</div>
+		</div>
+		<div class="row">
+			<div class="seven columns"><label for="number-defeated-molduga">Defeated Molduga</label></div>
+			<div class="five columns text-right">
+				<input type="text" id="number-defeated-molduga" style="width:50px" disabled />
+				<button onclick="defeatAllMolduga()">Defeat all</button>
+				<button onclick="addMoldugaToMap()">Add pins to Map</button>
+			</div>
+		</div> -->
+		<div class="row mb-10">
+			<div class="four columns">Hyrule Compendium <span id="span-compendium-counter"></span></div>
+			<div class="eight columns text-right">
+				<button onclick="Compendium.setToStock(false)">Set current to stock</button>
+				<button onclick="Compendium.setToStock(true)">Unlock missing</button>
+			</div>
+		</div>
+		<div class="row mb-10">
+			<div class="four columns">Shrines - Found: <span id="span-shrines-found-counter"></span> - Cleared: <span id="span-shrines-clear-counter"></span></div>
+			<div class="eight columns text-right">
+				<button onclick="Shrine.setAllAsFound()">Set all shrines as found</button>
+				<button onclick="Shrine.setAllAsClear()">Set all shrines as cleared</button>
+			</div>
+		</div>
+		<div class="row mb-10">
+			<div class="four columns">Lightroots - Found: <span id="span-lightroots-found-counter"></span> - Cleared: <span id="span-lightroots-clear-counter"></span></div>
+			<div class="eight columns text-right">
+				<button onclick="Lightroot.setAllAsFound()">Set all lightroots as found</button>
+				<button onclick="Lightroot.setAllAsClear()">Set all lightroots as activated</button>
+			</div>
+		</div>
+
+		<!-- <div class="row">
+			<div class="seven columns">Visited locations</div>
+			<div class="five columns text-right">
+				<button onclick="visitAllLocations()">Visit all</button>
+				<button onclick="addLocationsToMap()">Add pins to Map</button>
+			</div>
+		</div> -->
+	</div>
+	
+	<!-- TAB: WEAPONS -->
+	<div id="tab-weapons">
+		<h3>Weapons</h3><div id="container-weapons"></div>
+		<div class="text-center">
+			<button onclick="SavegameEditor.restoreDurability('weapons')">Restore durability</button>
+			<button class="with-icon icon1" onclick="SavegameEditor.addItem('weapons')">Add weapon</button>
+		</div>
+	</div>
+
+	<!-- TAB: BOWS -->
+	<div id="tab-bows">
+		<h3>Bows</h3><div id="container-bows"></div>
+		<div class="text-center">
+			<button onclick="SavegameEditor.restoreDurability('bows')">Restore durability</button>
+			<button class="with-icon icon1" onclick="SavegameEditor.addItem('bows')">Add bow</button>
+		</div>
+		<h3>Arrows</h3><div id="container-arrows"></div>
+	</div>
+
+	<!-- TAB: SHIELDS -->
+	<div id="tab-shields">
+		<h3>Shields</h3><div id="container-shields"></div>
+		<div class="text-center">
+			<button onclick="SavegameEditor.restoreDurability('shields')">Restore durability</button>
+			<button class="with-icon icon1" onclick="SavegameEditor.addItem('shields')">Add shield</button>
+		</div>
+	</div>
+
+	<!-- TAB: ARMORS -->
+	<div id="tab-armors">
+		<h3>Armors</h3><div id="container-armors"></div>
+		<div class="text-center">
+			<button class="with-icon icon1" onclick="SavegameEditor.addItem('armors')">Add armor</button>
+		</div>
+	</div>
+
+	<!-- TAB: MATERIALS -->
+	<div id="tab-materials">
+		<h3>Materials</h3><div id="container-materials"></div>
+		<div class="text-center">
+			<button class="with-icon icon1" onclick="SavegameEditor.addItem('materials')">Add material</button>
+		</div>
+	</div>
+
+	<!-- TAB: FOOD -->
+	<div id="tab-food">
+		<h3>Food</h3><div id="container-food"></div>
+		<div class="text-center">
+			<button class="with-icon icon1" onclick="SavegameEditor.addItem('food')">Add food</button>
+		</div>
+	</div>
+
+	<!-- TAB: ZONAI DEVICES -->
+	<div id="tab-devices">
+		<h3>Zonai devices</h3><div id="container-devices"></div>
+		<div class="text-center">
+			<button class="with-icon icon1" onclick="SavegameEditor.addItem('devices')">Add zonai device</button>
+		</div>
+	</div>
+
+	<!-- TAB: KEY -->
+	<div id="tab-key">
+		<h3>Key items</h3><div id="container-key"></div>
+		<div class="text-center">
+			<button class="with-icon icon1" onclick="SavegameEditor.addItem('key')">Add key item</button>
+		</div>
+	</div>
+
+	<!-- TAB: HORSES -->
+	<div id="tab-horses">
+		<h3 class="border-blue">Horses</h3>
+		<div id="container-horses"></div>
+		<!-- <div class="row"><div class="twelve columns">Untammed horse</div></div>
+		<div class="row" id="row-horse10">
+			<div class="three columns end"><select id="select-horse10-type"></select></div>
+		</div>
+		<div class="row">
+			<div class="six columns"><label for="float-pos-x-horse">Current horse coordinates (XYZ)</label></div>
+			<div class="two columns"><input id="float-pos-x-horse" class="full-width" type="text" /></div>
+			<div class="two columns"><input id="float-pos-y-horse" class="full-width" type="text" /></div>
+			<div class="two columns"><input id="float-pos-z-horse" class="full-width" type="text" /></div>
+		</div> -->
+	</div>
+
+	<!-- TAB: MASTER EDITOR -->
+	<div id="tab-master">
+		<div id="master-editor-loading" class="text-center">Master editor is loading...</div>
+		<div id="master-editor-hidden" class="hidden">
+			<div>
+				<label>Search <input id="input-custom-filter" type="text" list="knownHashes" placeholder="Search variables" onchange="TOTKMasterEditor.refreshResults()" /></label>
+				<datalist id="knownHashes">
+					<option value="paraglider fabric">Usable paraglider fabrics</option>
+					<option value="tower">Hyrule tower activation</option>
+				</datalist>
+			</div>
+
+			<table id="table"></table>
+			<div class="text-center">
+				<label for="select-page">Page: </label>
+				<button id="page-prev" onclick="TOTKMasterEditor.prevPage()">&laquo;</button>
+				<select id="select-page" class="small" onchange="TOTKMasterEditor.setPage(this.selectedIndex)"></select>
+				<button id="page-next" onclick="TOTKMasterEditor.nextPage()">&raquo;</button>
+			</div>
+		</div>
+	</div>
+
+	<!-- TAB: HELP -->
+	<div id="tab-help">
+	</div>
+</div>
+
+<div id="dialog-caption" class="dialog text-center"></div>
+
+</body>
+</html>
