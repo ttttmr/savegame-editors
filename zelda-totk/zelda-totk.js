@@ -1,23 +1,23 @@
 /*
-	The legend of Zelda: Tears of the Kingdom savegame editor v20230526
-	by Marc Robledo 2017-2020
+	The legend of Zelda: Tears of the Kingdom savegame editor v20230529
+
+	by Marc Robledo 2023
 */
 var currentEditingItem;
 
 SavegameEditor={
 	Name:'The legend of Zelda: Tears of the Kingdom',
 	Filename:['progress.sav','caption.sav'],
-	Version:20230521,
+	Version:20230529,
 	noDemo:true,
 
 	/* Constants */
 	Constants:{
-		VERSION:				['v1.0', 'v1.1'],
-		FILESIZE:				[2307552, 2307656],
-		HEADER:					[0x0046c3c8, 0x0047e0f4],
+		GAME_VERSIONS:[
+			{version:'v1.0', fileSize:2307552, header:0x0046c3c8, metaDataStart:0x0003c050},
+			{version:'v1.1', fileSize:2307656, header:0x0047e0f4, metaDataStart:0x0003c088}
+		],
 
-		//ICON_TYPES:{SWORD: 27, BOW:28, SHIELD:29, POT:30, STAR:31, CHEST:32,SKULL:33,LEAF:34,TOWER:35},
-		
 		BLANK_ICON_PATH:'./assets/_blank.png'
 	},
 
@@ -231,6 +231,7 @@ SavegameEditor={
 	/* private functions */
 	_toHexInt:function(i){var s=i.toString(16);while(s.length<8)s='0'+s;return '0x'+s},
 	_getOffsets:function(){
+		var ret=true;
 		this.Offsets={};
 		for(var i=0x000028; i<0x03c800; i+=8){
 			var hash=tempFile.readU32(i);
@@ -247,8 +248,10 @@ SavegameEditor={
 		for(var i=0; i<this.Hashes.length; i+=2){
 			if(typeof this.Offsets[this.Hashes[i+1]] === 'undefined'){
 				console.error('hash '+this.Hashes[i+1]+' not found');
+				ret=false;
 			}
 		}
+		return ret;
 	},
 	_getOffsetsByHashes:function(hashes, single){
 		var offsets={};
@@ -301,9 +304,6 @@ SavegameEditor={
 		spanItemId.addEventListener('click', function(){
 			SavegameEditor.editItem(item);
 		}, false);
-		if(typeof item.fuseId==='string' && item.fuseId){
-			spanItemId.innerHTML+=' <small style="color:#3d5b50">(fused: '+item.fuseId+')</small>';
-		}
 
 
 		var lastColumn=document.createElement('div');
@@ -311,6 +311,9 @@ SavegameEditor={
 			lastColumn.appendChild(item._htmlInputDurability);
 			lastColumn.appendChild(item._htmlSelectModifier);
 			lastColumn.appendChild(item._htmlInputModifierValue);
+			if(item.isFusable()){
+				lastColumn.appendChild(item._htmlSelectFusion);
+			}
 		}else if(item.quantity!==0xffffffff && (item.category==='arrows' || item.category==='materials' || item.category==='food' || item.category==='devices' || item.category==='key')){
 			lastColumn.appendChild(item._htmlInputQuantity);
 			if(item.category==='food'){
@@ -337,7 +340,7 @@ SavegameEditor={
 			lastColumn.appendChild(item._htmlSelectIconEyeColor);
 		}
 		
-		if(item.category==='materials' || item.category==='food' || item.category==='devices' || item.category==='key'){
+		if(item.removable){
 			item._htmlDeleteButton=document.createElement('button');
 			item._htmlDeleteButton.className='button colored red with-icon icon3 floating';
 			item._htmlDeleteButton.addEventListener('click', function(){
@@ -376,7 +379,11 @@ SavegameEditor={
 		}
 
 		var fakeItem;
-		if(catId==='materials' || catId==='food' || catId==='devices' || catId==='key'){
+		if(catId==='weapons' || catId==='bows' || catId==='shields'){
+			fakeItem=new Equipment(catId, items.length, '', 0xffffffff, Equipment.MODIFIER_NO_BONUS, 0xffffffff);
+		}else if(catId==='armors'){
+			fakeItem=new Armor(items.length, '', Armor.DYE_NONE);
+		}else if(catId==='materials' || catId==='food' || catId==='devices' || catId==='key'){
 			fakeItem=new Item(catId, items.length, '', 0xffffffff)
 		}
 		fakeItem.save();
@@ -419,6 +426,7 @@ SavegameEditor={
 		}else if(catId==='arrows' || catId==='materials' || catId==='food' || catId==='devices' || catId==='key'){
 			newItem=lastItem? lastItem.copy(lastItem.index+1, newId) : new Item(catId, 0, newId);
 		}
+		newItem.removable=true;
 
 	
 
@@ -527,6 +535,24 @@ SavegameEditor={
 		MarcDialogs.alert(count+' map pins added');
 		return count;
 	},
+	addLocationPins:function(flags, coordinates, icon){
+		var count=0;
+		var offsets=this._getOffsetsByHashes(flags);
+		for(var i=0; i<flags.length; i++){
+			if(!tempFile.readU32(offsets[flags[i]]) && this.addMapPin(icon, coordinates[i][0], coordinates[i][2], coordinates[i][1])) //vector3f is turned into a vector2f --> z->y
+				count++;
+		}
+
+		this.refreshMapPinsCounter();
+		MarcDialogs.alert(count+' map pins added');
+		return count;
+	},
+	addLocationPinsShrines:function(flags, coordinates, icon){
+		return this.addLocationPins(Shrine.HASHES_FOUND, Shrine.COORDINATES, MapPin.ICON_CRYSTAL);
+	},
+	addLocationPinsLightroots:function(flags, coordinates, icon){
+		return this.addLocationPins(Lightroot.HASHES_FOUND, Lightroot.COORDINATES, MapPin.ICON_CRYSTAL);
+	},
 	clearAllMapPins:function(){
 		var count=0;
 		for(var i=0; i<this.currentItems.mapPins.length; i++){
@@ -562,20 +588,13 @@ SavegameEditor={
 		tempFile.littleEndian=true;
 		//if(tempFile.fileName==='caption.sav'){
 		if(/caption/.test(tempFile.fileName)){
-			var startOffset=0x0474;
-			if(tempFile.readU32(startOffset)===0xe0ffd8ff){
-				var endOffset=startOffset+4;
-				var found=false;
-				while(endOffset<(tempFile.fileSize-2) && !found){
-					if(tempFile.readU8(endOffset)===0xff && tempFile.readU8(endOffset + 1)===0xd9){
-						found=true;
-					}else{
-						endOffset++;
-					}
-				}
-				
-				if(found){
-					var arrayBuffer=tempFile._u8array.buffer.slice(startOffset, endOffset+2);
+			for(var i=0x000028; i<0x000001c0; i+=8){
+				var hash=tempFile.readU32(i);
+				if(hash===0x63696a32){ //found JPG hash
+					var jpgOffset=tempFile.readU32(i+4);
+					var jpgSize=tempFile.readU32(jpgOffset);
+
+					var arrayBuffer=tempFile._u8array.buffer.slice(jpgOffset+4, jpgOffset+4+jpgSize);
 					var blob=new Blob([arrayBuffer], {type:'image/jpeg'});
 					var imageUrl=(window.URL || window.webkitURL).createObjectURL(blob);
 					var img=new Image();
@@ -585,18 +604,24 @@ SavegameEditor={
 					window.setTimeout(function(){
 						MarcDialogs.open('caption')
 					}, 100);
+
+					break;
 				}
 			}
-		}else{
-			for(var i=0; i<this.Constants.FILESIZE.length; i++){
-				var dummyHeader=tempFile.readU32(0);
-				var versionHash=tempFile.readU32(4);
-
-				if(tempFile.fileSize===this.Constants.FILESIZE[i] && dummyHeader===0x01020304 && versionHash===this.Constants.HEADER[i]){
-					this._getOffsets();
-					setValue('version', this.Constants.VERSION[i]);
-					return true;
+		}else if(tempFile.readU32(0)===0x01020304 && tempFile.fileSize>=2307552 && tempFile.fileSize<4194304){
+			var foundAllHashes=this._getOffsets();
+			if(foundAllHashes){
+				var header=tempFile.readU32(4);
+				var metaDataStart=tempFile.readU32(8);
+				var knownSavegameVersion=false;
+				for(var i=0; i<this.Constants.GAME_VERSIONS.length; i++){
+					if(tempFile.fileSize===this.Constants.GAME_VERSIONS[i].fileSize && header===this.Constants.GAME_VERSIONS[i].header && metaDataStart===this.Constants.GAME_VERSIONS[i].metaDataStart){
+						knownSavegameVersion=this.Constants.GAME_VERSIONS[i].version;
+						break;
+					}
 				}
+				setValue('version', knownSavegameVersion || 'Unknown');
+				return true;
 			}
 		}
 
@@ -613,6 +638,21 @@ SavegameEditor={
 			//this.parentElement.removeChild(this);
 			currentEditingItem=null;
 		}, false);
+
+		/* prepare fusable items list */
+		for(var itemId in Equipment.TRANSLATIONS.weapons){
+			if(!/^Weapon_Sword_07/.test(itemId))
+				Equipment.FUSABLE_ITEMS.push({value:itemId, name:'Weapon: '+Equipment.TRANSLATIONS.weapons[itemId]})
+		}
+		for(var itemId in Equipment.TRANSLATIONS.shields){
+			Equipment.FUSABLE_ITEMS.push({value:itemId, name:'Shield: '+Equipment.TRANSLATIONS.shields[itemId]})
+		}
+		for(var itemId in Item.TRANSLATIONS.materials){
+			Equipment.FUSABLE_ITEMS.push({value:itemId, name:'Material: '+Item.TRANSLATIONS.materials[itemId]})
+		}
+		for(var itemId in Item.TRANSLATIONS.devices){
+			Equipment.FUSABLE_ITEMS.push({value:itemId.replace('_Capsule',''), name:'Zonai: '+Item.TRANSLATIONS.devices[itemId]})
+		}
 
 		setNumericRange('rupees', 0, 999999);
 		setNumericRange('pony-points', 0, 999999);
